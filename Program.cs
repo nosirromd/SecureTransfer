@@ -76,6 +76,8 @@ namespace SecureTransfer
                     using (var ms = new MemoryStream())
                     {
                         // create CryptoStream and encrypt data
+                        //AES requires an initialization vector to be exchnged
+                        //this is normally sent in plaintext
                         using (var cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write))
                         {
 
@@ -119,7 +121,8 @@ namespace SecureTransfer
                       $"Alices public key information: {Convert.ToBase64String(symmKey)}");
                 
                 
-                // the symmetric key is used to de-crypt the message using AES
+                //the symmetric key and initialization vector
+                //is used to de-crypt the message using AES
                 aes.Key = symmKey;
                 aes.IV = iv;
 
