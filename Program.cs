@@ -28,7 +28,7 @@ namespace SecureTransfer
             try
             {
                 CreateKeys();
-                byte[] encrytpedData = await AliceSendsDataAsync("this is a secret message for Bob");
+                byte[] encrytpedData = await AliceSendsDataAsync("Hi Bob, Alice here, DC Morrison says Hi!");
                 await BobReceivesDataAsync(encrytpedData);
             }
             catch (Exception ex)
