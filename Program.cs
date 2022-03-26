@@ -23,8 +23,8 @@ namespace SecureTransfer
         private async Task RunAsync()
         {
             // create all the keys
-            // simulate aslices ending an enncypted message to bob
-            // simulate bob recivinng and decyypting the alice'smesage
+            // simulate Alice sending an enncypted message to Bob
+            // simulate Bob recivinng and decypting the Alice's mesage
             try
             {
                 CreateKeys();
@@ -40,6 +40,8 @@ namespace SecureTransfer
         private void CreateKeys()
         {       
             // create private and public keys for alice and bob
+            // export the objects into byte arrays
+            // keep this stuff private
             _aliceKey = CngKey.Create(CngAlgorithm.ECDiffieHellmanP521);
             _bobKey = CngKey.Create(CngAlgorithm.ECDiffieHellmanP521);
             _alicePubKeyBlob = _aliceKey.Export(CngKeyBlobFormat.EccPublicBlob);
@@ -48,26 +50,26 @@ namespace SecureTransfer
 
         private async Task<byte[]> AliceSendsDataAsync(string message)
         {
-            // convert supplied message to bytes stream
+            // convert supplied message to byte array
             Console.WriteLine($"Alice sends message: {message}");
             byte[] rawData = Encoding.UTF8.GetBytes(message);
             byte[] encryptedData = null;
  
             //start a class instance to help us do the EC Diffie-Hellman 521 algorithm
-            //algorithm gives a way of create the same symmetric key, independently,
-            //by alice and bob 
-            //here it uses alice's keys and bib's public key
+            //algorithm gives us a way of creating the same symmetric key, independently,
+            //by Alice and by Bob 
+            //here it uses Alice's keys and Bob's public key
             using (var aliceAlgorithm = new ECDiffieHellmanCng(_aliceKey))
             using (CngKey bobPubKey = CngKey.Import(_bobPubKeyBlob,
                   CngKeyBlobFormat.EccPublicBlob))
             {
                 // create a symmetric key using Elliptic-curve Diffie–Hellman
                 byte[] symmKey = aliceAlgorithm.DeriveKeyMaterial(bobPubKey);
-                Console.WriteLine("Alice creates this symmetric key with " +
-                      $"Bobs public key information: { Convert.ToBase64String(symmKey)}");
+                Console.WriteLine("Alice creates this symmetric key with her keys and " +
+                      $"Bob's public key information: { Convert.ToBase64String(symmKey)}");
 
                 //the symmetric key is used to en-crypt the message using AES
-                //we use AES to scramble the (encypt) the message
+                //we use AES to scramble (encypt) the message
                 using (var aes = new AesCryptoServiceProvider())
                 {
                     aes.Key = symmKey;
@@ -83,9 +85,10 @@ namespace SecureTransfer
 
                             // write initialization vector not encrypted
                             await ms.WriteAsync(aes.IV, 0, aes.IV.Length);
+                            // write the message the encypted to the crypto stream
                             await cs.WriteAsync(rawData, 0, rawData.Length);
                         }
-                        encryptedData = ms.ToArray();
+                        encryptedData = ms.ToArray(); //write the memory stream to a byte array
                     }
                     aes.Clear();
                 }
