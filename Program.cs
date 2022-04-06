@@ -23,8 +23,8 @@ namespace SecureTransfer
         private async Task RunAsync()
         {
             // create all the keys
-            // simulate Alice sending an enncypted message to Bob
-            // simulate Bob recivinng and decypting the Alice's mesage
+            // simulate Alice sending an encrypted message to Bob
+            // simulate Bob recieving and decrypting Alice's mesage
             try
             {
                 CreateKeys();
@@ -40,8 +40,9 @@ namespace SecureTransfer
         private void CreateKeys()
         {       
             // create private and public keys for alice and bob
-            // export the objects into byte arrays
+            // export the public keys objects into byte arrays
             // keep this stuff private
+            // and statc and hence visble by all the class methods
             _aliceKey = CngKey.Create(CngAlgorithm.ECDiffieHellmanP521);
             _bobKey = CngKey.Create(CngAlgorithm.ECDiffieHellmanP521);
             _alicePubKeyBlob = _aliceKey.Export(CngKeyBlobFormat.EccPublicBlob);
@@ -55,17 +56,17 @@ namespace SecureTransfer
             byte[] rawData = Encoding.UTF8.GetBytes(message);
             byte[] encryptedData = null;
  
-            //start a class instance to help us do the EC Diffie-Hellman 521 algorithm
+            //start a class instance to help us do the EC Diffie-Hellman 521 algorithm operations
             //algorithm gives us a way of creating the same symmetric key, independently,
             //by Alice and by Bob 
-            //here it uses Alice's keys and Bob's public key
+            //here it uses both Alice's keys and Bob's public key
             using (var aliceAlgorithm = new ECDiffieHellmanCng(_aliceKey))
             using (CngKey bobPubKey = CngKey.Import(_bobPubKeyBlob,
                   CngKeyBlobFormat.EccPublicBlob))
             {
                 // create a symmetric key using Elliptic-curve Diffie–Hellman
                 byte[] symmKey = aliceAlgorithm.DeriveKeyMaterial(bobPubKey);
-                Console.WriteLine("Alice creates this symmetric key with her keys and " +
+                Console.WriteLine("Alice creates this symmetric key with both her keys and " +
                       $"Bob's public key information: { Convert.ToBase64String(symmKey)}");
 
                 //the symmetric key is used to en-crypt the message using AES
@@ -78,14 +79,14 @@ namespace SecureTransfer
                     using (var ms = new MemoryStream())
                     {
                         // create CryptoStream and encrypt data
-                        //AES requires an initialization vector to be exchnged
-                        //this is normally sent in plaintext
+                        // AES requires an initialization vector to be exchnged
+                        // this is normally sent in plaintext, positioned at the begining of the bytestream
                         using (var cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write))
                         {
 
                             // write initialization vector not encrypted
                             await ms.WriteAsync(aes.IV, 0, aes.IV.Length);
-                            // write the message the encypted to the crypto stream
+                            // write the message to be encypted to the crypto stream
                             await cs.WriteAsync(rawData, 0, rawData.Length);
                         }
                         encryptedData = ms.ToArray(); //write the memory stream to a byte array
@@ -105,20 +106,21 @@ namespace SecureTransfer
 
             var aes = new AesCryptoServiceProvider();
 
+            // parse the plaintext IV from the encrypted byte array
             int nBytes = aes.BlockSize >> 3;
             byte[] iv = new byte[nBytes];
             for (int i = 0; i < iv.Length; i++)
                 iv[i] = encryptedData[i];
 
-            //start a class instance to help us do the EC Diffie-Hellman 521 algorithm
+            //create a class instance to help us do the EC Diffie-Hellman 521 algorithm
             //algorithm gives a way of create the same symmetric key, independently,
             //by alice and bob 
-            //here it uses bob's keys and alice's public key
+            //here it uses both bob's keys and alice's public key
             using (var bobAlgorithm = new ECDiffieHellmanCng(_bobKey))
             using (CngKey alicePubKey = CngKey.Import(_alicePubKeyBlob,
                   CngKeyBlobFormat.EccPublicBlob))
             {
-                // create a symmetric key using alice's public key and bob's private key
+                // create a symmetric key using alice's public key and both bob's keys
                 byte[] symmKey = bobAlgorithm.DeriveKeyMaterial(alicePubKey);
                 Console.WriteLine("Bob creates this symmetric key with " +
                       $"Alices public key information: {Convert.ToBase64String(symmKey)}");
